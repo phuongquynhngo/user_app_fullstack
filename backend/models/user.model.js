@@ -10,9 +10,9 @@ module.exports = mongoose => {
           required: [true, "Please enter user's role"] 
         },
         online_status: {
-            type: String,
-            required: false
-          }
+          type: Boolean,
+          required: false
+        }
       },
       { timestamps: true }
     );

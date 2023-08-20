@@ -17,13 +17,13 @@
             <td class="px-6 py-4 whitespace-nowrap">{{ user.name }}</td>
             <td class="px-6 py-4 whitespace-nowrap">{{ user.role }}</td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span :class="{ 'text-green-600': user.online, 'text-red-600': !user.online }">
-                {{ user.online ? "Online" : "Offline" }}
+              <span :class="{ 'text-green-600': user.online_status, 'text-red-600': !user.online_status }">
+                {{ user.online_status ? "Online" : "Offline" }}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <button @click="openUserDetailsModal(user)" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button>
-              <button @click="deleteUser(user.id)" class="text-red-600 hover:text-red-900">Delete</button>
+              <button @click="fetchUserById(user.id)" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button>
+              <button @click="deleteUser(user.id)"  class="text-red-600 hover:text-red-900">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -42,6 +42,13 @@
               <label for="role" class="block text-gray-700">Role</label>
               <input v-model="newUserRole" type="text" id="role" class="w-full border rounded p-2" />
             </div>
+            <div class="mb-4">
+            <label class="block text-gray-700">Online Status:</label>
+            <div>
+              <input v-model="newUserStatus" type="checkbox" id="editOnlineStatus" />
+              <label for="editOnlineStatus" class="ml-2">Online</label>
+            </div>
+          </div>
             <div class="flex justify-end">
               <button type="button" @click="closeModal" class="mr-2 bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded">Cancel</button>
               <button type="submit" class="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded">Create</button>
@@ -54,8 +61,8 @@
     <!-- User Details / Edit Modal -->
     <div v-if="selectedUser" class="fixed inset-0 flex items-center justify-center z-10">
       <div class="bg-white w-1/2 p-6 rounded-lg shadow-lg">
-        <h2 class="text-lg font-semibold mb-4">{{ isEditing ? "Edit User" : "User Details" }}</h2>
-        <form @submit.prevent="saveUser">
+        <h2 class="text-lg font-semibold mb-4"> User Details</h2>
+        <form @submit.prevent="updateUser">
           <div class="mb-4">
             <label for="editName" class="block text-gray-700">Name:</label>
             <input v-model="selectedUser.name" type="text" id="editName" class="w-full border rounded p-2" />
@@ -67,13 +74,13 @@
           <div class="mb-4">
             <label class="block text-gray-700">Online Status:</label>
             <div>
-              <input v-model="selectedUser.online" type="checkbox" id="editOnlineStatus" />
-              <label for="editOnlineStatus" class="ml-2">{{ selectedUser.online ? "Online" : "Offline" }}</label>
+              <input v-model="selectedUser.online_status" type="checkbox" id="editOnlineStatus" />
+              <label for="editOnlineStatus" class="ml-2">Online</label>
             </div>
           </div>
           <div class="flex justify-end">
             <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded">
-              {{ isEditing ? "Save" : "Edit" }}
+             Update
             </button>
             <button @click="closeUserDetailsModal" class="ml-2 bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded">Close</button>
           </div>
@@ -86,19 +93,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import api from "../api";
+import { User } from "../../models/User.ts";
 
-// const users = ref([
-//   { id: 1, name: "User 1", role: "Admin", online: true },
-//   { id: 2, name: "User 2", role: "User", online: false },
-//   // ... other user data
-// ]);
-
-const deleteUser = (userId) => {
-  // Implement delete logic here
-};
-const users = ref("");
+let users = ref<User[] | null>();
 const newUserName = ref("");
 const newUserRole = ref("");
+const newUserStatus = ref(false);
 const isModalOpen = ref(false);
 
 const openModal = () => {
@@ -110,17 +110,6 @@ const closeModal = () => {
   resetForm();
 };
 
-// const createUser = () => {
-//   if (newUserName.value && newUserRole.value) {
-//     users.value.push({
-//       id: users.value.length + 1,
-//       name: newUserName.value,
-//       role: newUserRole.value,
-//       online: false, // New users are offline by default
-//     });
-//     closeModal();
-//   }
-// };
 
 // Function to create a new user using the configured Axios instance
 const createUser = async () => {
@@ -128,16 +117,15 @@ const createUser = async () => {
     const newUser = {
       name: newUserName.value,
       role: newUserRole.value,
-      online: false,
+      online_status:  newUserStatus.value,
     };
 
-    try {
-      const response = await api.post('/users', newUser, {
+    try {await api.post('/users', newUser, {
       headers: {
         "Content-Type": "application/json",
       },
       })
-      .then((response) => {
+      .then(() => {
       fetchUsers();
       console.log(newUser);
       closeModal();
@@ -154,12 +142,20 @@ const resetForm = () => {
   newUserRole.value = "";
 };
 
-const selectedUser = ref(null);
+const selectedUser = ref<User | null>();
 const isUserDetailsModalOpen = ref(false);
-const isEditing = ref(false);
 
+const fetchUserById = async (userId: number) => {
+  try {
+    const response = await api.get(`/users/${userId}`);
+    selectedUser.value = response.data; // Set the fetched user as the selectedUser
+    openUserDetailsModal(selectedUser.value); // Open the update modal with the selected user's data
+  } catch (error) {
+    console.error('Error fetching user by ID:', error);
+  }
+};
 
-const openUserDetailsModal = (user) => {
+const openUserDetailsModal = (user: User) => {
   selectedUser.value = user;
   isUserDetailsModalOpen.value = true;
 };
@@ -169,21 +165,47 @@ const closeUserDetailsModal = () => {
   isUserDetailsModalOpen.value = false;
 };
 
-const editSelectedUser = () => {
+const updateUser = async () => {
   if (selectedUser.value) {
-    openEditModal(selectedUser.value);
+    const updatedUser = {
+      name: selectedUser.value.name,
+      role: selectedUser.value.role,
+      online_status: selectedUser.value.online_status,
+    };
+
+    try {
+      // Make the API request to update the user's details
+       await api.put(`/users/${selectedUser.value.id}`, updatedUser, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Update the user data locally and close the modal
+      fetchUsers();
+      closeUserDetailsModal();
+    } catch (error) {
+      console.error('Error updating user:', error);
+    }
   }
 };
 
-const saveUser = () => {
-  isEditing.value = false;
+const deleteUser = async (userId: string) => {
+  try {
+    await api.delete(`/users/${userId}`);
+    users.value = users.value?.filter(user => user.id !== userId); // Remove the deleted user from the list
+  } catch (error) {
+    console.error('Error deleting user:', error);
+  }
 };
+
 
 // Function to fetch users using the configured Axios instance
 const fetchUsers = async () => {
   try {
     const response = await api.get('/users');
     users.value = response.data;
+    console.log("users.value", users.value);
   } catch (error) {
     console.error('Error fetching users:', error);
   }
