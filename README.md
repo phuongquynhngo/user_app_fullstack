@@ -1,6 +1,6 @@
 # Full Stack User App
 
-Welcome to the Full Stack User App project! This is a simple web application built using Vue.js, Node.js, Express, MongoDB, and Axios.
+Welcome to my Full Stack User App project! This is a simple web application built using Vue.js, Node.js, Express, MongoDB, and Axios.
 
 ## Project Overview
 
