@@ -84,18 +84,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import api from "../api";
 
-const users = ref([
-  { id: 1, name: "User 1", role: "Admin", online: true },
-  { id: 2, name: "User 2", role: "User", online: false },
-  // ... other user data
-]);
+// const users = ref([
+//   { id: 1, name: "User 1", role: "Admin", online: true },
+//   { id: 2, name: "User 2", role: "User", online: false },
+//   // ... other user data
+// ]);
 
 const deleteUser = (userId) => {
   // Implement delete logic here
 };
-
+const users = ref("");
 const newUserName = ref("");
 const newUserRole = ref("");
 const isModalOpen = ref(false);
@@ -109,15 +110,42 @@ const closeModal = () => {
   resetForm();
 };
 
-const createUser = () => {
+// const createUser = () => {
+//   if (newUserName.value && newUserRole.value) {
+//     users.value.push({
+//       id: users.value.length + 1,
+//       name: newUserName.value,
+//       role: newUserRole.value,
+//       online: false, // New users are offline by default
+//     });
+//     closeModal();
+//   }
+// };
+
+// Function to create a new user using the configured Axios instance
+const createUser = async () => {
   if (newUserName.value && newUserRole.value) {
-    users.value.push({
-      id: users.value.length + 1,
+    const newUser = {
       name: newUserName.value,
       role: newUserRole.value,
-      online: false, // New users are offline by default
-    });
-    closeModal();
+      online: false,
+    };
+
+    try {
+      const response = await api.post('/users', newUser, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      })
+      .then((response) => {
+      fetchUsers();
+      console.log(newUser);
+      closeModal();
+    })
+     
+    } catch (error) {
+      console.error('Error creating user:', error);
+    }
   }
 };
 
@@ -150,6 +178,21 @@ const editSelectedUser = () => {
 const saveUser = () => {
   isEditing.value = false;
 };
+
+// Function to fetch users using the configured Axios instance
+const fetchUsers = async () => {
+  try {
+    const response = await api.get('/users');
+    users.value = response.data;
+  } catch (error) {
+    console.error('Error fetching users:', error);
+  }
+};
+
+
+onMounted(() => {
+  Promise.all([fetchUsers()]);
+});
 </script>
 
 <style scoped>

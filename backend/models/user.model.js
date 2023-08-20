@@ -23,7 +23,7 @@ module.exports = mongoose => {
       return object;
     });
   
-    const User = mongoose.model("User", schema); // Capitalize model name
+    const User = mongoose.model("user", schema); // Capitalize model name
   
     return User;
   };
